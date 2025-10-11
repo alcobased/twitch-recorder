@@ -1,4 +1,3 @@
-
 # Twitch Stream Recorder
 
 This is a simple Python script to record Twitch live streams using `streamlink`.
@@ -23,12 +22,14 @@ You need to create a `config.json` file to specify the channel URL and recording
     ```json
     {
         "channel_url": "<your_twitch_channel_url>",
-        "duration": 0
+        "duration": 0,
+        "wait_interval": 60
     }
     ```
 
 *   `channel_url`: The URL of the Twitch channel you want to record.
 *   `duration`: The duration of the recording in seconds. If set to `0`, the recording will continue until the broadcast ends or is manually interrupted (e.g., by pressing `Ctrl+C`).
+*   `wait_interval`: The interval in seconds to wait before checking if the stream is online again. Defaults to 60 seconds if not provided.
 
 ## Add dependencies
 

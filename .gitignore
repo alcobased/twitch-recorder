@@ -1,17 +1,4 @@
-# Python
-__pycache__/
 *.pyc
-*.pyo
-*.pyd
-
-# Virtual environment
+__pycache__/
 .venv/
-
-# Project specific
-recordings/
-.vscode/
-uv.lock
-*.egg-info/
-
-# Config
-config.json
+recorder.log
