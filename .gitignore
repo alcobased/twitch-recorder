@@ -12,3 +12,6 @@ recordings/
 .vscode/
 uv.lock
 *.egg-info/
+
+# Config
+config.json

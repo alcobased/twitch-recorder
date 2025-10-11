@@ -3,23 +3,39 @@ import sys
 import os
 from datetime import datetime
 import time
+import json
 
 def main():
     """
     Captures a Twitch live stream and saves it locally.
     """
-    if len(sys.argv) < 2:
-        print("Usage: python main.py <twitch_channel_url> [duration_in_seconds]")
-        sys.exit(1)
-
-    channel_url = sys.argv[1]
+    channel_url = None
     duration = 0
-    if len(sys.argv) > 2:
+
+    if len(sys.argv) < 2:
         try:
-            duration = int(sys.argv[2])
-        except ValueError:
-            print("Error: Duration must be an integer.")
+            with open('config.json', 'r') as f:
+                config = json.load(f)
+                channel_url = config.get('channel_url')
+            if not channel_url:
+                print("Usage: python main.py <twitch_channel_url> [duration_in_seconds]")
+                print("Or, create a config.json with a 'channel_url' key.")
+                sys.exit(1)
+        except FileNotFoundError:
+            print("Usage: python main.py <twitch_channel_url> [duration_in_seconds]")
+            print("Or, create a config.json with a 'channel_url' key.")
             sys.exit(1)
+        except json.JSONDecodeError:
+            print("Error: Could not decode config.json. Please ensure it is valid JSON.")
+            sys.exit(1)
+    else:
+        channel_url = sys.argv[1]
+        if len(sys.argv) > 2:
+            try:
+                duration = int(sys.argv[2])
+            except ValueError:
+                print("Error: Duration must be an integer.")
+                sys.exit(1)
 
     try:
         streams = streamlink.streams(channel_url)
@@ -47,11 +63,9 @@ def main():
     
     fd = stream.open()
     
-    # Create a directory to store the recordings
     if not os.path.exists("recordings"):
         os.makedirs("recordings")
         
-    # Generate a filename with the current date and time
     now = datetime.now()
     filename = f"recordings/{now.strftime('%Y-%m-%d_%H-%M-%S')}.ts"
     
