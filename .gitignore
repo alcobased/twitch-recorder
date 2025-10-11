@@ -1,4 +1,21 @@
-*.pyc
-__pycache__/
-.venv/
+# Log files
 recorder.log
+
+# Configuration files
+config.json
+
+# Recordings
+recordings/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+virtualenv/
+
+# Dependency management
+uv.lock
