@@ -19,3 +19,6 @@ virtualenv/
 
 # Dependency management
 uv.lock
+
+# IDE
+.vscode/
