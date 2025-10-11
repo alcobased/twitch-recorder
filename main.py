@@ -96,6 +96,7 @@ def record_stream(stream, duration):
     except KeyboardInterrupt:
         logging.info("Recording stopped by user.")
         print("\nRecording stopped by user.")
+        raise  # Re-raise the exception to exit the script
             
     finally:
         fd.close()
@@ -104,31 +105,38 @@ def record_stream(stream, duration):
 
 def main():
     """
-    Captures a Twitch live stream and saves it locally.
+    Captures a Twitch live stream and saves it locally, running as a daemon.
     """
     setup_logging()
     logging.info("Script started.")
     
     channel_url, duration, wait_interval = get_config()
     
-    stream = get_stream(channel_url)
-    
-    first_check = True
-    while stream is None:
-        if first_check:
-            message = f"Stream is offline. Waiting for the stream to go live... Checking every {wait_interval} seconds."
-            logging.info(message)
-            print(message)
-            first_check = False
-        else:
-            logging.info("Stream still offline.")
-
-        time.sleep(wait_interval)
+    while True:
         stream = get_stream(channel_url)
         
-    logging.info("Stream is online! Starting recorder...")
-    print("Stream is online! Starting recorder...")
-    record_stream(stream, duration)
+        first_check = True
+        while stream is None:
+            if first_check:
+                message = f"Stream is offline. Waiting for the stream to go live... Checking every {wait_interval} seconds."
+                logging.info(message)
+                print(message)
+                first_check = False
+            else:
+                logging.info(f"Stream still offline. Waiting for {wait_interval} seconds.")
+
+            time.sleep(wait_interval)
+            stream = get_stream(channel_url)
+            
+        logging.info("Stream is online! Starting recorder...")
+        print("Stream is online! Starting recorder...")
+        try:
+            record_stream(stream, duration)
+            logging.info(f"Recording finished. Waiting for {wait_interval} seconds before checking again.")
+            time.sleep(wait_interval) # Wait before checking again
+        except KeyboardInterrupt:
+            break # Exit the while loop if Ctrl+C is pressed
+
     logging.info("Script finished.")
 
 if __name__ == "__main__":
