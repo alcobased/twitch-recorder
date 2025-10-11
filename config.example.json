@@ -1,3 +1,4 @@
 {
-    "channel_url": "<your_twitch_channel_url>"
+    "channel_url": "<your_twitch_channel_url>",
+    "duration": 0
 }
