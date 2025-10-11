@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environment
+.venv/
+
+# Project specific
+recordings/
+.vscode/
+uv.lock
+*.egg-info/

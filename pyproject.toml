@@ -1,7 +1,9 @@
 [project]
-name = "myapp"
+name = "twitch-recorder"
 version = "0.1.0"
-description = "Add your description here"
+description = "A simple tool to record Twitch live streams."
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "streamlink>=7.6.0",
+]
