@@ -116,10 +116,12 @@ def main():
     first_check = True
     while stream is None:
         if first_check:
-            message = "Stream is offline. Waiting for the stream to go live..."
+            message = f"Stream is offline. Waiting for the stream to go live... Checking every {wait_interval} seconds."
             logging.info(message)
             print(message)
             first_check = False
+        else:
+            logging.info("Stream still offline.")
 
         time.sleep(wait_interval)
         stream = get_stream(channel_url)
