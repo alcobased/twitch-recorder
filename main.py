@@ -5,10 +5,8 @@ import time
 import json
 import sys
 
-def main():
-    """
-    Captures a Twitch live stream and saves it locally.
-    """
+def get_config():
+    """Reads and validates the configuration from config.json."""
     try:
         with open('config.json', 'r') as f:
             config = json.load(f)
@@ -17,6 +15,7 @@ def main():
         if not channel_url:
             print("Error: 'channel_url' not found in config.json.")
             sys.exit(1)
+        return channel_url, duration
     except FileNotFoundError:
         print("Error: config.json not found. Please create one.")
         sys.exit(1)
@@ -24,6 +23,8 @@ def main():
         print("Error: Could not decode config.json. Please ensure it is valid JSON.")
         sys.exit(1)
 
+def get_stream(channel_url):
+    """Gets the best quality stream for the given channel URL."""
     try:
         streams = streamlink.streams(channel_url)
     except streamlink.exceptions.NoPluginError:
@@ -42,8 +43,10 @@ def main():
         print(f"Quality '{quality}' not found, defaulting to 'best'.")
         quality = "best"
     
-    stream = streams[quality]
-    
+    return streams[quality]
+
+def record_stream(stream, duration):
+    """Records the stream to a file."""
     fd = stream.open()
     
     if not os.path.exists("recordings"):
@@ -78,6 +81,14 @@ def main():
     finally:
         fd.close()
         print("Recording finished.")
+
+def main():
+    """
+    Captures a Twitch live stream and saves it locally.
+    """
+    channel_url, duration = get_config()
+    stream = get_stream(channel_url)
+    record_stream(stream, duration)
 
 if __name__ == "__main__":
     main()
