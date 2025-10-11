@@ -23,11 +23,24 @@ def get_config():
             channel_url = config.get('channel_url')
             duration = config.get('duration', 0)
             wait_interval = config.get('wait_interval', 60)
+            recording_path = config.get('recording_path')
+
         if not channel_url:
             logging.error("'channel_url' not found in config.json.")
             print("Error: 'channel_url' not found in config.json.")
             sys.exit(1)
-        return channel_url, duration, wait_interval
+            
+        if not recording_path:
+            logging.error("'recording_path' not found in config.json.")
+            print("Error: 'recording_path' not found in config.json.")
+            sys.exit(1)
+
+        if not os.path.isabs(recording_path):
+            logging.error("'recording_path' must be an absolute path.")
+            print("Error: 'recording_path' must be an absolute path.")
+            sys.exit(1)
+
+        return channel_url, duration, wait_interval, recording_path
     except FileNotFoundError:
         logging.error("config.json not found.")
         print("Error: config.json not found. Please create one.")
@@ -61,15 +74,15 @@ def get_stream(channel_url):
     
     return streams[quality]
 
-def record_stream(stream, duration):
+def record_stream(stream, duration, recording_path):
     """Records the stream to a file."""
     fd = stream.open()
     
-    if not os.path.exists("recordings"):
-        os.makedirs("recordings")
+    if not os.path.exists(recording_path):
+        os.makedirs(recording_path)
         
     now = datetime.now()
-    filename = f"recordings/{now.strftime('%Y-%m-%d_%H-%M-%S')}.ts"
+    filename = os.path.join(recording_path, f"{now.strftime('%Y-%m-%d_%H-%M-%S')}.ts")
     
     logging.info(f"Recording stream to {filename}")
     print(f"Recording stream to {filename}...")
@@ -110,7 +123,7 @@ def main():
     setup_logging()
     logging.info("Script started.")
     
-    channel_url, duration, wait_interval = get_config()
+    channel_url, duration, wait_interval, recording_path = get_config()
     
     while True:
         stream = get_stream(channel_url)
@@ -131,7 +144,7 @@ def main():
         logging.info("Stream is online! Starting recorder...")
         print("Stream is online! Starting recorder...")
         try:
-            record_stream(stream, duration)
+            record_stream(stream, duration, recording_path)
             logging.info(f"Recording finished. Waiting for {wait_interval} seconds before checking again.")
             time.sleep(wait_interval) # Wait before checking again
         except KeyboardInterrupt:

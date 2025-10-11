@@ -1,5 +1,6 @@
 {
     "channel_url": "<your_twitch_channel_url>",
     "duration": 0,
-    "wait_interval": 60
+    "wait_interval": 60,
+    "recording_path": "/path/to/your/recordings"
 }
