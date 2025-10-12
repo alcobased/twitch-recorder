@@ -5,6 +5,7 @@ import time
 import json
 import sys
 import logging
+import server
 
 def setup_logging():
     """Sets up logging to a file."""
@@ -123,13 +124,18 @@ def main():
     setup_logging()
     logging.info("Script started.")
     
+    server.start_server_thread()
+    server.status['status'] = "initializing"
+    
     channel_url, duration, wait_interval, recording_path = get_config()
     
     while True:
+        server.status['last_check'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         stream = get_stream(channel_url)
         
         first_check = True
         while stream is None:
+            server.status['status'] = "offline"
             if first_check:
                 message = f"Stream is offline. Waiting for the stream to go live... Checking every {wait_interval} seconds."
                 logging.info(message)
@@ -139,15 +145,19 @@ def main():
                 logging.info(f"Stream still offline. Waiting for {wait_interval} seconds.")
 
             time.sleep(wait_interval)
+            server.status['last_check'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             stream = get_stream(channel_url)
             
         logging.info("Stream is online! Starting recorder...")
         print("Stream is online! Starting recorder...")
+        server.status['status'] = "recording"
         try:
             record_stream(stream, duration, recording_path)
             logging.info(f"Recording finished. Waiting for {wait_interval} seconds before checking again.")
+            server.status['status'] = "waiting"
             time.sleep(wait_interval) # Wait before checking again
         except KeyboardInterrupt:
+            server.status['status'] = "stopped"
             break # Exit the while loop if Ctrl+C is pressed
 
     logging.info("Script finished.")
