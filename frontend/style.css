@@ -1,0 +1,10 @@
+body {
+    font-family: sans-serif;
+    margin: 2em;
+}
+
+#status-container {
+    border: 1px solid #ccc;
+    padding: 1em;
+    border-radius: 5px;
+}

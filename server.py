@@ -6,19 +6,21 @@ import threading
 # Shared status dictionary
 status = {"status": "offline", "last_check": None}
 
-class StatusHandler(http.server.SimpleHTTPRequestHandler):
+class Handler(http.server.SimpleHTTPRequestHandler):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, directory='frontend', **kwargs)
+
     def do_GET(self):
         if self.path == '/status':
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps(status).encode())
+            self.wfile.write(json.dumps(status).encode('utf-8'))
         else:
-            self.send_response(404)
-            self.end_headers()
+            super().do_GET()
 
 def run_server():
-    with socketserver.TCPServer(("", 8000), StatusHandler) as httpd:
+    with socketserver.TCPServer(("", 8000), Handler) as httpd:
         print("Server started at localhost:8000")
         httpd.serve_forever()
 
