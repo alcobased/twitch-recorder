@@ -1,5 +1,10 @@
 {
-    "channel_url": "<your_twitch_channel_url>",
+    "channels": [
+        {
+            "url": "<your_twitch_channel_url>",
+            "quality": "best"
+        }
+    ],
     "duration": 0,
     "wait_interval": 60,
     "recording_path": "/path/to/your/recordings"

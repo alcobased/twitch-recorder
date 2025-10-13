@@ -3,8 +3,8 @@ import socketserver
 import json
 import threading
 
-# Shared status dictionary
-status = {"status": "offline", "last_check": None}
+# Shared status dictionary, to be populated by the main script
+channels_status = {}
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -15,7 +15,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            self.wfile.write(json.dumps(status).encode('utf-8'))
+            self.wfile.write(json.dumps(channels_status).encode('utf-8'))
         elif self.path == '/recordings':
             try:
                 with open('recording_log.jsonl', 'r') as f:

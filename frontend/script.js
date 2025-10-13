@@ -6,9 +6,14 @@ document.addEventListener("DOMContentLoaded", function() {
         fetch("/status")
             .then(response => response.json())
             .then(data => {
-                const status = data.status;
-                const lastCheck = data.last_check;
-                statusContainer.innerHTML = `<p>Status: ${status}</p><p>Last Check: ${lastCheck}</p>`;
+                let table = "<table><tr><th>Channel</th><th>Status</th><th>Last Check</th></tr>";
+                for (const channel in data) {
+                    const status = data[channel].status;
+                    const lastCheck = data[channel].last_check;
+                    table += `<tr><td>${channel}</td><td>${status}</td><td>${lastCheck || 'N/A'}</td></tr>`;
+                }
+                table += "</table>";
+                statusContainer.innerHTML = table;
             })
             .catch(error => {
                 console.error("Error fetching status:", error);
@@ -25,9 +30,9 @@ document.addEventListener("DOMContentLoaded", function() {
                     return;
                 }
 
-                let table = "<table><tr><th>Filename</th><th>Start Time</th><th>End Time</th></tr>";
+                let table = "<table><tr><th>Filename</th><th>Channel</th><th>Start Time</th><th>End Time</th></tr>";
                 data.forEach(recording => {
-                    table += `<tr><td>${recording.filename}</td><td>${recording.start_time}</td><td>${recording.end_time}</td></tr>`;
+                    table += `<tr><td>${recording.filename}</td><td>${recording.channel_url}</td><td>${recording.start_time}</td><td>${recording.end_time}</td></tr>`;
                 });
                 table += "</table>";
                 recordingsContainer.innerHTML = table;
