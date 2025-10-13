@@ -16,6 +16,19 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-type', 'application/json')
             self.end_headers()
             self.wfile.write(json.dumps(status).encode('utf-8'))
+        elif self.path == '/recordings':
+            try:
+                with open('recording_log.jsonl', 'r') as f:
+                    recordings = [json.loads(line) for line in f]
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps(recordings).encode('utf-8'))
+            except FileNotFoundError:
+                self.send_response(200)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps([]).encode('utf-8'))
         else:
             super().do_GET()
 

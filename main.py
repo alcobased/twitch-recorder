@@ -76,7 +76,7 @@ def get_stream(channel_url):
     return streams[quality]
 
 def record_stream(stream, duration, recording_path):
-    """Records the stream to a file."""
+    """Records the stream to a file and logs the session."""
     fd = stream.open()
     
     if not os.path.exists(recording_path):
@@ -93,6 +93,8 @@ def record_stream(stream, duration, recording_path):
         print("Recording until the broadcast ends or you press Ctrl+C to stop.")
     print("Press Ctrl+C to stop recording.")
     
+    start_time_obj = datetime.now()
+    start_time_iso = start_time_obj.isoformat()
     start_time = time.time()
     
     try:
@@ -114,6 +116,18 @@ def record_stream(stream, duration, recording_path):
             
     finally:
         fd.close()
+        end_time_obj = datetime.now()
+        end_time_iso = end_time_obj.isoformat()
+
+        log_entry = {
+            "filename": filename,
+            "start_time": start_time_iso,
+            "end_time": end_time_iso,
+        }
+
+        with open("recording_log.jsonl", "a") as log_file:
+            log_file.write(json.dumps(log_entry) + "\n")
+
         logging.info("Recording finished.")
         print("Recording finished.")
 
