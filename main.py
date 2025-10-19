@@ -8,6 +8,7 @@ import logging
 import threading
 import server
 
+
 def setup_logging():
     """Sets up logging to a file."""
     logging.basicConfig(
@@ -16,6 +17,7 @@ def setup_logging():
         format='%(asctime)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
+
 
 def get_config():
     """Reads and validates the configuration from config.json."""
@@ -34,8 +36,10 @@ def get_config():
 
         for channel in channels:
             if 'url' not in channel or 'quality' not in channel:
-                logging.error("Each channel in 'channels' must have a 'url' and 'quality'.")
-                print("Error: Each channel in 'channels' must have a 'url' and 'quality'.")
+                logging.error(
+                    "Each channel in 'channels' must have a 'url' and 'quality'.")
+                print(
+                    "Error: Each channel in 'channels' must have a 'url' and 'quality'.")
                 sys.exit(1)
 
         if not recording_path:
@@ -58,6 +62,7 @@ def get_config():
         print("Error: Could not decode config.json. Please ensure it is valid JSON.")
         sys.exit(1)
 
+
 def get_stream(channel_url, quality):
     """Gets the specified quality stream for the given channel URL."""
     try:
@@ -73,13 +78,15 @@ def get_stream(channel_url, quality):
         return None
 
     if quality not in streams:
-        logging.warning(f"Quality '{quality}' not found for {channel_url}, defaulting to 'best'.")
+        logging.warning(
+            f"Quality '{quality}' not found for {channel_url}, defaulting to 'best'.")
         quality = "best"
         if "best" not in streams:
             logging.error(f"No streams found for {channel_url}")
             return None
 
     return streams[quality]
+
 
 def record_stream(stream, duration, recording_path, channel_url):
     """Records the stream to a file and logs the session."""
@@ -89,8 +96,10 @@ def record_stream(stream, duration, recording_path, channel_url):
         os.makedirs(recording_path)
 
     now = datetime.now()
-    channel_name = channel_url.split('/')[-1] if 'twitch.tv' in channel_url else 'stream'
-    filename = os.path.join(recording_path, f"{channel_name}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.ts")
+    channel_name = channel_url.split(
+        '/')[-1] if 'twitch.tv' in channel_url else 'stream'
+    filename = os.path.join(
+        recording_path, f"{channel_name}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.mkv")
 
     logging.info(f"Recording stream from {channel_url} to {filename}")
     print(f"Recording stream from {channel_url} to {filename}...")
@@ -103,7 +112,8 @@ def record_stream(stream, duration, recording_path, channel_url):
         with open(filename, "wb") as f:
             while True:
                 if duration > 0 and time.time() - start_time > duration:
-                    logging.info(f"Recording finished after {duration} seconds for {channel_url}.")
+                    logging.info(
+                        f"Recording finished after {duration} seconds for {channel_url}.")
                     break
 
                 data = fd.read(1024)
@@ -131,6 +141,7 @@ def record_stream(stream, duration, recording_path, channel_url):
 
         logging.info(f"Recording finished for {channel_url}.")
 
+
 def record_channel_loop(channel, duration, recording_path, wait_interval):
     """The main loop for recording a single channel."""
     channel_url = channel['url']
@@ -139,17 +150,20 @@ def record_channel_loop(channel, duration, recording_path, wait_interval):
     channel_status['status'] = 'initializing'
 
     while True:
-        channel_status['last_check'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        channel_status['last_check'] = datetime.now().strftime(
+            '%Y-%m-%d %H:%M:%S')
         stream = get_stream(channel_url, quality)
 
         if stream is None:
             if channel_status['status'] != 'offline':
-                logging.info(f"Stream for {channel_url} is offline. Waiting...")
+                logging.info(
+                    f"Stream for {channel_url} is offline. Waiting...")
                 channel_status['status'] = 'offline'
             time.sleep(wait_interval)
             continue
 
-        logging.info(f"Stream for {channel_url} is online! Starting recorder...")
+        logging.info(
+            f"Stream for {channel_url} is online! Starting recorder...")
         channel_status['status'] = 'recording'
 
         try:
@@ -161,6 +175,7 @@ def record_channel_loop(channel, duration, recording_path, wait_interval):
             channel_status['status'] = 'stopped'
             break
 
+
 def main():
     """
     Captures live streams and saves them locally, running as a daemon for multiple channels.
@@ -171,13 +186,15 @@ def main():
     channels, duration, wait_interval, recording_path = get_config()
 
     for channel in channels:
-        server.channels_status[channel['url']] = {'status': 'uninitialized', 'last_check': None}
+        server.channels_status[channel['url']] = {
+            'status': 'uninitialized', 'last_check': None}
 
     server.start_server_thread()
 
     threads = []
     for channel in channels:
-        thread = threading.Thread(target=record_channel_loop, args=(channel, duration, recording_path, wait_interval))
+        thread = threading.Thread(target=record_channel_loop, args=(
+            channel, duration, recording_path, wait_interval))
         thread.daemon = True
         thread.start()
         threads.append(thread)
@@ -190,6 +207,7 @@ def main():
         print("\nShutdown signal received. Stopping all recorders.")
 
     logging.info("Script finished.")
+
 
 if __name__ == "__main__":
     main()
