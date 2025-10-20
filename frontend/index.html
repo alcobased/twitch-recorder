@@ -17,6 +17,23 @@
         <div id="recordings-container">
             <p>Loading recordings...</p>
         </div>
+
+        <h2>Settings</h2>
+        <div id="settings-container">
+            <form id="settings-form">
+                <label for="duration">Duration:</label>
+                <input type="number" id="duration" name="duration"><br><br>
+                <label for="wait_interval">Wait Interval:</label>
+                <input type="number" id="wait_interval" name="wait_interval"><br><br>
+                <label for="recording_path">Recording Path:</label>
+                <input type="text" id="recording_path" name="recording_path"><br><br>
+                <h3>Channels</h3>
+                <div id="channels-container">
+                </div>
+                <button type="button" id="add-channel">Add Channel</button><br><br>
+                <button type="submit">Save Settings</button>
+            </form>
+        </div>
     </div>
 
     <script src="script.js"></script>
