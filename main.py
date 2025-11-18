@@ -7,6 +7,7 @@ import sys
 import logging
 import threading
 import server
+import subprocess  # <-- NEW IMPORT
 
 
 def setup_logging():
@@ -88,6 +89,60 @@ def get_stream(channel_url, quality):
     return streams[quality]
 
 
+def run_mkvmerge(input_filename, channel_url):
+    """
+    Runs mkvmerge to re-mux the .ts file into a .mkv container.
+    Then, it deletes the original .ts file if successful.
+    """
+    # Create the output filename by replacing .ts with .mkv
+    base, _ = os.path.splitext(input_filename)
+    output_filename = base + ".mkv"
+
+    # mkvmerge command: -o (output file) input_file
+    command = ['mkvmerge', '-o', output_filename, input_filename]
+
+    logging.info(f"[{channel_url}] Starting mkvmerge post-processing...")
+    print(f"[{channel_url}] Starting post-processing with mkvmerge...")
+
+    try:
+        # Use subprocess.run for simple command execution
+        subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True  # Raises CalledProcessError for non-zero exit codes
+        )
+
+        logging.info(
+            f"[{channel_url}] mkvmerge finished successfully: {output_filename}")
+        print(
+            f"[{channel_url}] Post-processing successful: {os.path.basename(output_filename)}")
+
+        # Delete the original .ts file
+        os.remove(input_filename)
+        logging.info(
+            f"[{channel_url}] Original file deleted: {input_filename}")
+        print(
+            f"[{channel_url}] Original file {os.path.basename(input_filename)} deleted.")
+
+    except subprocess.CalledProcessError as e:
+        logging.error(
+            f"[{channel_url}] mkvmerge failed. Exit code: {e.returncode}. Stderr: {e.stderr.strip()}")
+        print(f"[{channel_url}] ERROR: mkvmerge failed. Original file retained.")
+
+    except FileNotFoundError:
+        logging.error(
+            f"[{channel_url}] mkvmerge tool not found. Is it installed and in the system PATH?")
+        print(
+            f"[{channel_url}] ERROR: mkvmerge tool not found. Please install mkvtoolnix.")
+
+    except Exception as e:
+        logging.error(
+            f"[{channel_url}] An unexpected error occurred during mkvmerge process: {e}")
+        print(
+            f"[{channel_url}] An unexpected error occurred during mkvmerge process: {e}")
+
+
 def record_stream(stream, duration, recording_path, channel_url):
     """Records the stream to a file and logs the session."""
     fd = stream.open()
@@ -98,56 +153,87 @@ def record_stream(stream, duration, recording_path, channel_url):
     now = datetime.now()
     channel_name = channel_url.split(
         '/')[-1] if 'twitch.tv' in channel_url else 'stream'
-    filename = os.path.join(
-        recording_path, f"{channel_name}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.mkv")
 
-    logging.info(f"Recording stream from {channel_url} to {filename}")
-    print(f"Recording stream from {channel_url} to {filename}...")
+    # NOTE: We temporarily use .ts as the container for the raw stream data
+    temp_filename = os.path.join(
+        recording_path, f"{channel_name}_{now.strftime('%Y-%m-%d_%H-%M-%S')}.ts")
+
+    logging.info(f"Recording stream from {channel_url} to {temp_filename}")
+    print(f"Recording stream from {channel_url} to {temp_filename}...")
 
     start_time_obj = datetime.now()
     start_time_iso = start_time_obj.isoformat()
     start_time = time.time()
 
+    is_successful_record = False  # Flag to track if we should run mkvmerge/log
+
     try:
-        with open(filename, "wb") as f:
+        with open(temp_filename, "wb") as f:
             while True:
                 if duration > 0 and time.time() - start_time > duration:
                     logging.info(
                         f"Recording finished after {duration} seconds for {channel_url}.")
+                    is_successful_record = True
                     break
 
                 data = fd.read(1024)
                 if not data:
+                    is_successful_record = True  # Stream ended naturally
                     break
                 f.write(data)
     except KeyboardInterrupt:
         logging.info(f"Recording stopped by user for {channel_url}.")
+        # Do not log or process if stopped by user
         return
 
     finally:
         fd.close()
-        end_time_obj = datetime.now()
-        end_time_iso = end_time_obj.isoformat()
+        logging.info(f"Recording stream file closed for {channel_url}.")
 
-        log_entry = {
-            "channel_url": channel_url,
-            "filename": filename,
-            "start_time": start_time_iso,
-            "end_time": end_time_iso,
-        }
+        if is_successful_record and os.path.exists(temp_filename):
+            # 1. Run mkvmerge and delete the .ts file
+            run_mkvmerge(temp_filename, channel_url)
 
-        with open("recording_log.jsonl", "a") as log_file:
-            log_file.write(json.dumps(log_entry) + "\n")
+            # 2. Log the session (using the final .mkv filename)
+            end_time_obj = datetime.now()
+            end_time_iso = end_time_obj.isoformat()
 
-        logging.info(f"Recording finished for {channel_url}.")
+            # The final filename will be the one created by mkvmerge (base + .mkv)
+            base, _ = os.path.splitext(temp_filename)
+            final_filename = base + ".mkv"
+
+            log_entry = {
+                "channel_url": channel_url,
+                "filename": final_filename,
+                "start_time": start_time_iso,
+                "end_time": end_time_iso,
+            }
+
+            with open("recording_log.jsonl", "a") as log_file:
+                log_file.write(json.dumps(log_entry) + "\n")
+
+            logging.info(f"Recording finished and logged for {channel_url}.")
+        else:
+            logging.warning(
+                f"Recording interrupted or file missing for {channel_url}. Skipping post-processing and logging.")
+            if os.path.exists(temp_filename):
+                os.remove(temp_filename)
+                logging.info(f"Removed partial file {temp_filename}.")
 
 
 def record_channel_loop(channel, duration, recording_path, wait_interval):
     """The main loop for recording a single channel."""
     channel_url = channel['url']
     quality = channel['quality']
+    # Use the base channel name for console output clarity
+    channel_name = channel_url.split(
+        '/')[-1] if 'twitch.tv' in channel_url else 'stream'
+
+    server.channels_status[channel_url] = server.channels_status.get(
+        channel_url, {'status': 'initializing', 'last_check': None})
     channel_status = server.channels_status[channel_url]
     channel_status['status'] = 'initializing'
+    channel_status['name'] = channel_name  # Add name for easier reading
 
     while True:
         channel_status['last_check'] = datetime.now().strftime(
@@ -157,22 +243,29 @@ def record_channel_loop(channel, duration, recording_path, wait_interval):
         if stream is None:
             if channel_status['status'] != 'offline':
                 logging.info(
-                    f"Stream for {channel_url} is offline. Waiting...")
+                    f"[{channel_name}] Stream is offline. Waiting...")
                 channel_status['status'] = 'offline'
             time.sleep(wait_interval)
             continue
 
         logging.info(
-            f"Stream for {channel_url} is online! Starting recorder...")
+            f"[{channel_name}] Stream is online! Starting recorder...")
         channel_status['status'] = 'recording'
+        channel_status['recording_since'] = datetime.now().strftime(
+            '%Y-%m-%d %H:%M:%S')
 
         try:
             record_stream(stream, duration, recording_path, channel_url)
-            logging.info(f"Recording for {channel_url} finished. Waiting...")
+
+            # The recording finished successfully (by duration or stream end)
+            logging.info(f"[{channel_name}] Recording finished. Waiting...")
             channel_status['status'] = 'waiting'
+            channel_status.pop('recording_since', None)
             time.sleep(wait_interval)
+
         except KeyboardInterrupt:
             channel_status['status'] = 'stopped'
+            channel_status.pop('recording_since', None)
             break
 
 
@@ -183,8 +276,12 @@ def main():
     setup_logging()
     logging.info("Script started.")
 
-    channels, duration, wait_interval, recording_path = get_config()
+    try:
+        channels, duration, wait_interval, recording_path = get_config()
+    except SystemExit:
+        return
 
+    # Initialize shared status dictionary
     for channel in channels:
         server.channels_status[channel['url']] = {
             'status': 'uninitialized', 'last_check': None}
@@ -200,6 +297,7 @@ def main():
         threads.append(thread)
 
     try:
+        # Keep the main thread alive while worker threads and server thread run
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
