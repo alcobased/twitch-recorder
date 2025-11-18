@@ -281,11 +281,13 @@ def main():
     except SystemExit:
         return
 
-    # Initialize shared status dictionary
     for channel in channels:
+        # Note: The channel status should ideally be cleared/re-initialized here
+        # to ensure server doesn't hold stale data if config changed.
         server.channels_status[channel['url']] = {
             'status': 'uninitialized', 'last_check': None}
 
+    # Start the HTTP server thread
     server.start_server_thread()
 
     threads = []
@@ -303,6 +305,10 @@ def main():
     except KeyboardInterrupt:
         logging.info("Shutdown signal received. Stopping all recorders.")
         print("\nShutdown signal received. Stopping all recorders.")
+
+        # --- NEW GRACEFUL SHUTDOWN ---
+        # Stop the web server before the main process exits
+        server.stop_server()
 
     logging.info("Script finished.")
 
